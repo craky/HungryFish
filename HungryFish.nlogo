@@ -61,7 +61,7 @@ to go
   if create_new_food = 1 [
     create-foods 1 [
      set shape "plant"
-     set size 6
+     set size 3
      set color green
      setxy random-xcor random-ycor
     ]
