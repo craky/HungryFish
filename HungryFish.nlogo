@@ -13,25 +13,28 @@ to setup
 end
 
 to setup-individuals
+  create-foods 20 [
+   set shape "plant"
+   set size 3
+   set color green
+   setxy random-xcor random-ycor
+  ]
+
+
   create-fishes 20 [
     set shape "fish"
     set size 3
     set color red
     ; Setup init coordinates
     setxy random-xcor random-ycor
-    ; Rotate turtle
-    rt random 40
-    lt random 40
+
+    ; Face turtle to some of food which is nearest
+    face min-one-of foods [distance myself]
     ; Moving step
     fd 0.1
   ]
 
-  create-foods 180 [
-   set shape "plant"
-   set size 3
-   set color green
-   setxy random-xcor random-ycor
-  ]
+
 
   trait-plot
 end
@@ -40,14 +43,16 @@ to go
   let create_new_food 0
 
   ask fishes [
+   ; Face turtle to some of food which is nearest
+   face min-one-of foods [distance myself]
    fd 0.1
-   if count other foods-here > 1 [
+   if count other foods-here > 0 [
       set eaten-food eaten-food + 1
     ]
   ]
 
   ask foods[
-    if count other fishes-here > 1 [
+    if count other fishes-here > 0 [
       set create_new_food 1
       die
     ]
