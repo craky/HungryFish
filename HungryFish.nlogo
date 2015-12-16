@@ -1,5 +1,8 @@
 breed [fishes fish]
 breed [foods food]
+fishes-own[
+  eaten-food
+]
 
 to setup
   ; At start clear all
@@ -23,18 +26,47 @@ to setup-individuals
     fd 0.1
   ]
 
-  create-foods 20 [
+  create-foods 180 [
    set shape "plant"
    set size 3
    set color green
    setxy random-xcor random-ycor
   ]
+
+  trait-plot
 end
 
 to go
+  let create_new_food 0
+
   ask fishes [
    fd 0.1
+   if count other foods-here > 1 [
+      set eaten-food eaten-food + 1
+    ]
   ]
+
+  ask foods[
+    if count other fishes-here > 1 [
+      set create_new_food 1
+      die
+    ]
+  ]
+
+  if create_new_food = 1 [
+    create-foods 1 [
+     set shape "plant"
+     set size 6
+     set color green
+     setxy random-xcor random-ycor
+    ]
+  ]
+  trait-plot
+end
+
+to trait-plot
+  set-current-plot "eaten-food"
+  plot max [eaten-food] of fishes
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -97,6 +129,24 @@ NIL
 NIL
 NIL
 1
+
+PLOT
+783
+28
+983
+178
+eaten-food
+time
+Sum of eaten food
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot max [ eaten-food ] of fishes"
 
 @#$#@#$#@
 ## WHAT IS IT?
