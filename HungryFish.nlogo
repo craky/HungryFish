@@ -2,6 +2,7 @@ breed [fishes fish]
 breed [foods food]
 fishes-own[
   eaten-food
+  chromosome
 ]
 globals [max-eaten]
 
@@ -13,7 +14,7 @@ to setup
 end
 
 to setup-individuals
-  create-foods 20 [
+  create-foods 40 [
    set shape "plant"
    set size 3
    set color green
@@ -22,9 +23,18 @@ to setup-individuals
 
 
   create-fishes 20 [
-    set shape "fish"
+    ;set shape "fish"
     set size 3
     set color red
+    ; Set up chromosome to init random values
+    ; chromo_n are weights
+    ; random 2 will create a random value from 0 to 2
+    ; - 1 will make from -1 to 1
+    let chromo_1 random 2 - 1
+    let chromo_2 random 2 - 1
+    let chromo_3 random 2 - 1
+    set chromosome (list chromo_1 chromo_2 chromo_3)
+
     ; Setup init coordinates
     setxy random-xcor random-ycor
 
@@ -33,9 +43,6 @@ to setup-individuals
     ; Moving step
     fd 0.1
   ]
-
-
-
   trait-plot
 end
 
@@ -44,8 +51,18 @@ to go
 
   ask fishes [
    ; Face turtle to some of food which is nearest
-   face min-one-of foods [distance myself]
-   fd 0.1
+   let nearest_food min-one-of foods [distance myself]
+   ;Debug: show [ycor] of nearest_food
+   ;Old: face nearest_food
+
+   ;coordinates of nearest food
+   let food_x [xcor] of nearest_food
+   let food_y [ycor] of nearest_food
+   let food_vector vector xcor ycor food_x food_y
+   ; Turtle turns right
+   rt neuron (item 0 food_vector) (item 1 food_vector) towardsxy food_x food_y
+
+   fd 0.2
    if count other foods-here > 0 [
       set eaten-food eaten-food + 1
     ]
@@ -73,6 +90,35 @@ end
 to trait-plot
   set-current-plot "eaten-food"
   plot max [eaten-food] of fishes
+end
+
+; Sigmoid function
+; computes sigmoid (-1;1) based on input
+to-report sigmoid [input]
+  report 1 / (1 + e ^ (- input))
+end
+
+; x - x coor of computed vector
+; y - y coor of computed vector
+; t - result of towards of nearest plant
+; ret - degree in angle of rotation in a clockwise direction
+to-report neuron [x y t]
+  let input_sum (item 0 chromosome) * x + (item 1 chromosome) * y + (item 2 chromosome) * t
+  report sigmoid input_sum * 360
+end
+
+; my_x x coor of the fish
+; my_y y coor of the fish
+; food_x x coor of the nearest food
+; food_y y coor of the nearest food
+; ret normalized vector
+to-report vector [ my_x my_y food_x food_y ]
+    let v_x food_x - my_x
+    let v_y food_y - my_y
+    let vector_size sqrt (v_x * v_x + v_y * v_y)
+    set v_x v_x / vector_size
+    set v_y v_y / vector_size
+    report (list v_x v_y)
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
