@@ -3,13 +3,13 @@ breed [foods food]
 fishes-own[
   eaten-food
 ]
+globals [max-eaten]
 
 to setup
   ; At start clear all
   clear-all
   setup-individuals
-
-
+  set max-eaten 0
 end
 
 to setup-individuals
@@ -67,6 +67,7 @@ to go
     ]
   ]
   trait-plot
+  set max-eaten max [eaten-food] of fishes
 end
 
 to trait-plot
@@ -152,6 +153,17 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plot max [ eaten-food ] of fishes"
+
+MONITOR
+786
+223
+907
+268
+Max eaten foods
+max-eaten
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
