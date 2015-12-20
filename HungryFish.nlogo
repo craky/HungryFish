@@ -4,13 +4,15 @@ fishes-own[
   eaten-food
   chromosome
 ]
-globals [max-eaten]
+globals [max-eaten generation total_eaten]
 
 to setup
   ; At start clear all
   clear-all
   setup-individuals
   set max-eaten 0
+  set total_eaten 0
+  set generation 1
 end
 
 to setup-individuals
@@ -26,13 +28,14 @@ to setup-individuals
     ;set shape "fish"
     set size 3
     set color red
+    set eaten-food 0
     ; Set up chromosome to init random values
     ; chromo_n are weights
     ; random 2 will create a random value from 0 to 2
     ; - 1 will make from -1 to 1
-    let chromo_1 random 2 - 1
-    let chromo_2 random 2 - 1
-    let chromo_3 random 2 - 1
+    let chromo_1 random-float 2 - 1
+    let chromo_2 random-float 2 - 1
+    let chromo_3 random-float 2 - 1
     set chromosome (list chromo_1 chromo_2 chromo_3)
 
     ; Setup init coordinates
@@ -41,19 +44,25 @@ to setup-individuals
     ; Face turtle to some of food which is nearest
     face min-one-of foods [distance myself]
     ; Moving step
-    fd 0.1
+    fd fish-speed
   ]
   trait-plot
+  ; for debug reasons
+  reset-ticks
 end
 
 to go
   let create_new_food 0
 
+  ; start new generation
+  if ticks >= generation_time [
+    reset-ticks
+    new_gen
+  ]
+
   ask fishes [
    ; Face turtle to some of food which is nearest
    let nearest_food min-one-of foods [distance myself]
-   ;Debug: show [ycor] of nearest_food
-   ;Old: face nearest_food
 
    ;coordinates of nearest food
    let food_x [xcor] of nearest_food
@@ -61,21 +70,24 @@ to go
    let food_vector vector xcor ycor food_x food_y
    ; Turtle turns right
    rt neuron (item 0 food_vector) (item 1 food_vector) towardsxy food_x food_y
+   ;rt neuron (item 0 food_vector) (item 1 food_vector) ((distance nearest_food) / max-pxcor)
 
-   fd 0.2
+   fd fish-speed
    if count other foods-here > 0 [
       set eaten-food eaten-food + 1
     ]
   ]
 
+
   ask foods[
     if count other fishes-here > 0 [
       set create_new_food 1
+      set total_eaten total_eaten + 1
       die
     ]
   ]
 
-  if create_new_food = 1 [
+  while [not (count foods = 40)] [
     create-foods 1 [
      set shape "plant"
      set size 3
@@ -85,11 +97,14 @@ to go
   ]
   trait-plot
   set max-eaten max [eaten-food] of fishes
+  tick
 end
 
 to trait-plot
-  set-current-plot "eaten-food"
-  plot max [eaten-food] of fishes
+  set-current-plot "total-eaten"
+  plot total_eaten
+  ;set-current-plot-pen pen-1
+  ;plot total_eaten / count fishes
 end
 
 ; Sigmoid function
@@ -104,7 +119,7 @@ end
 ; ret - degree in angle of rotation in a clockwise direction
 to-report neuron [x y t]
   let input_sum (item 0 chromosome) * x + (item 1 chromosome) * y + (item 2 chromosome) * t
-  report sigmoid input_sum * 360
+  report sigmoid input_sum
 end
 
 ; my_x x coor of the fish
@@ -119,6 +134,54 @@ to-report vector [ my_x my_y food_x food_y ]
     set v_x v_x / vector_size
     set v_y v_y / vector_size
     report (list v_x v_y)
+end
+
+; This function will find best fish.
+; Kills all other ( bad fishes ).
+to new_gen
+  let n count fishes
+  let best_fish max-one-of fishes [eaten-food]
+
+  ;reset variables
+  set max-eaten 0
+  set total_eaten 0
+  set generation generation + 1
+
+  ;kill all bad fishes
+  ;let bad_fishes min-n-of (n - 1) fishes [eaten-food]
+  let bad_fishes fishes with [not member? self (list best_fish)]
+  ;ask bad_fishes [ die ]
+
+
+  ask bad_fishes [
+    set chromosome crossbreeding (item 0 [chromosome] of best_fish) (item 1 [chromosome] of best_fish) (item 2 [chromosome] of best_fish) (item 0 chromosome) (item 1 chromosome) (item 2 chromosome)
+  ]
+
+  ask fishes[
+   set eaten-food 0
+  ]
+
+  trait-plot
+  set max-eaten 0
+end
+
+; Crossbreads new fishes
+; inputs are weights of the best fish and old chromosome
+to-report crossbreeding [w1 w2 w3 old_w1 old_w2 old_w3]
+  let weight1 old_w1
+  let weight2 old_w2
+  let weight3 old_w3
+  ifelse random 10 < 8 [set weight1 w1][set weight1 old_w1]
+  ifelse random 10 < 8 [set weight2 w2][set weight2 old_w2]
+  ifelse random 10 < 8 [set weight3 w3][set weight3 old_w3]
+
+
+  ; mutation - add or subtract some bias
+  set weight1 weight1 + random-float 0.2 - 0.1
+  set weight2 weight2 + random-float 0.2 - 0.1
+  set weight3 weight3 + random-float 0.2 - 0.1
+
+  report (list weight1 weight2 weight3)
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -183,11 +246,11 @@ NIL
 1
 
 PLOT
-783
-28
-983
-178
-eaten-food
+773
+12
+1479
+350
+total-eaten
 time
 Sum of eaten food
 0.0
@@ -195,58 +258,161 @@ Sum of eaten food
 0.0
 10.0
 true
-false
+true
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot max [ eaten-food ] of fishes"
+"total eaten" 1.0 0 -16777216 true "" "plot total_eaten"
 
 MONITOR
-786
-223
-907
-268
+720
+415
+841
+460
 Max eaten foods
 max-eaten
 17
 1
 11
 
+MONITOR
+719
+470
+868
+515
+Average eaten foods
+total_eaten / 20
+17
+1
+11
+
+BUTTON
+14
+124
+161
+157
+New Generation
+new_gen
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+MONITOR
+718
+361
+868
+406
+Generation number:
+generation
+17
+1
+11
+
+MONITOR
+890
+360
+1018
+405
+Total eaten foods
+total_eaten
+17
+1
+11
+
+PLOT
+1024
+357
+1479
+558
+Max eaten foods
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"Max" 1.0 0 -16777216 true "" "plot max-eaten"
+"Average" 1.0 0 -14439633 true "" "plot total_eaten / 20"
+
+SLIDER
+2
+213
+174
+246
+fish-speed
+fish-speed
+0.01
+0.5
+0.08
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+1
+254
+194
+287
+generation_time
+generation_time
+500
+50000
+50000
+100
+1
+NIL
+HORIZONTAL
+
 @#$#@#$#@
 ## WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
+Model is trying to develop smart fish. Model is using genetic algorithm. Fish are trying to eat foods.
 
 ## HOW IT WORKS
 
-(what rules the agents use to create the overall behavior of the model)
+There are always 20 fish and 40 plants. Every fish has a neuron with 3 inputs and one output.
+
+Inputs are:
+
+* X coordination of a normalized vector (fish -> nearest plant).
+* Y coordination of a normalized vector (fish -> nearest plant).
+* The heading from the fish towards the point of the nearest plant (x,y).
+
+Output is:
+
+* How many degrees should fish turn to the right.
 
 ## HOW TO USE IT
 
-(how to use the model, including a description of each of the items in the Interface tab)
+At first run Setup button. Then You can choose speed of every fish and how many ticks will generation survive.
 
-## THINGS TO NOTICE
+If you push go everything will start.
 
-(suggested things for the user to notice while running the model)
-
-## THINGS TO TRY
-
-(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
 
 ## EXTENDING THE MODEL
 
-(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+Model is not perfect. Maybe will be better with other inputs or more outputs.
 
-## NETLOGO FEATURES
-
-(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
 
 ## RELATED MODELS
 
-(models in the NetLogo Models Library and elsewhere which are of related interest)
+Inspired by https://www.youtube.com/watch?v=Fp9kzoAxsA4
 
 ## CREDITS AND REFERENCES
 
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
+Author: Vojtech Krakora, krakovoj@fit.cvut.cz
+School project 2015
+https://github.com/craky/HungryFish
 @#$#@#$#@
 default
 true
